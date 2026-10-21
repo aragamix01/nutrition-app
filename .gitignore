@@ -1,0 +1,23 @@
+# deps / build
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# env & secrets — never commit
+.env*
+!.env.example
+
+# vercel
+.vercel/
+
+# raw USDA data (download locally, never commit)
+data/usda/
+
+# local tooling
+.playwright-mcp/
+.claude/settings.local.json
+npm-debug.log*
+.DS_Store

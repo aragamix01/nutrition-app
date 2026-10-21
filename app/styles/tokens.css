@@ -1,0 +1,141 @@
+/* Nutrition App tokens — from the Design System (tokens.json). */
+:root,
+[data-theme='light'] {
+  --surface: #fffaf2;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f4efe6;
+  --line: #ece4d6;
+  --line-strong: #8f897f;
+  --ink: #2a2622;
+  --ink-muted: #6b645a;
+  --basil: #2b7044;
+  --basil-soft: #dcf3e1;
+  --on-basil: #ffffff;
+  --chili: #b8422c;
+  --chili-soft: #ffe4d9;
+  --on-chili: #ffffff;
+  --protein: #3d6fc4;
+  --protein-soft: #dfe9ff;
+  --carb: #b07a12;
+  --carb-soft: #fff1c9;
+  --fat: #b2507a;
+  --fat-soft: #ffe3ee;
+  --focus: var(--basil);
+  --shadow-card: 0 1px 2px rgba(42, 38, 34, 0.04), 0 8px 24px rgba(42, 38, 34, 0.06);
+  --shadow-float: 0 10px 30px rgba(42, 38, 34, 0.16);
+}
+[data-theme='dark'] {
+  --surface: #191714;
+  --surface-raised: #24211d;
+  --surface-sunken: #2e2a25;
+  --line: #3a352f;
+  --line-strong: #7d766c;
+  --ink: #f5efe6;
+  --ink-muted: #b5ada0;
+  --basil: #8fd9a3;
+  --basil-soft: #203a29;
+  --on-basil: #10261a;
+  --chili: #ff9a7e;
+  --chili-soft: #47231a;
+  --on-chili: #2a0f08;
+  --protein: #8fb3f5;
+  --protein-soft: #1f2c47;
+  --carb: #e9bf5c;
+  --carb-soft: #3d3112;
+  --fat: #f09bbd;
+  --fat-soft: #44233a;
+  --focus: var(--basil);
+  --shadow-card: 0 0 0 1px rgba(245, 239, 230, 0.06);
+  --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --surface: #191714;
+    --surface-raised: #24211d;
+    --surface-sunken: #2e2a25;
+    --line: #3a352f;
+    --line-strong: #7d766c;
+    --ink: #f5efe6;
+    --ink-muted: #b5ada0;
+    --basil: #8fd9a3;
+    --basil-soft: #203a29;
+    --on-basil: #10261a;
+    --chili: #ff9a7e;
+    --chili-soft: #47231a;
+    --on-chili: #2a0f08;
+    --protein: #8fb3f5;
+    --protein-soft: #1f2c47;
+    --carb: #e9bf5c;
+    --carb-soft: #3d3112;
+    --fat: #f09bbd;
+    --fat-soft: #44233a;
+    --focus: var(--basil);
+    --shadow-card: 0 0 0 1px rgba(245, 239, 230, 0.06);
+    --shadow-float: 0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+}
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+  --tap-target: 44px;
+  --fab-size: 60px;
+  --nav-height: 64px;
+  --font-display: var(--font-mitr), var(--font-plex), system-ui, sans-serif;
+  --font-sans: var(--font-plex), 'Noto Sans Thai Looped', system-ui, sans-serif;
+}
+.num-display {
+  font-family: var(--font-display);
+  font-size: 44px;
+  line-height: 48px;
+  font-weight: 500;
+}
+.num-lg {
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 500;
+}
+.num {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 500;
+}
+.heading {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 500;
+}
+.body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+}

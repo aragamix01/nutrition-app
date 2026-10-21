@@ -1,0 +1,127 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@import './styles/components.css';
+
+/* Expose design tokens as Tailwind utilities (bg-surface, text-ink-muted, rounded-lg, ...). */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-basil: var(--basil);
+  --color-basil-soft: var(--basil-soft);
+  --color-on-basil: var(--on-basil);
+  --color-chili: var(--chili);
+  --color-chili-soft: var(--chili-soft);
+  --color-protein: var(--protein);
+  --color-protein-soft: var(--protein-soft);
+  --color-carb: var(--carb);
+  --color-carb-soft: var(--carb-soft);
+  --color-fat: var(--fat);
+  --color-fat-soft: var(--fat-soft);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+}
+
+html {
+  background: var(--surface);
+}
+
+/* Room for the floating nav + LIFF browser chrome. */
+.page {
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 32px 16px calc(var(--nav-height) + 120px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  z-index: 10;
+}
+
+.seg {
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+}
+.seg > button {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 15px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink-muted);
+}
+.seg > button[aria-checked='true'] {
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 500;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border-radius: 20px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit;
+  background: var(--surface-sunken);
+  border: 2px solid transparent;
+}
+.choice[aria-checked='true'] {
+  background: var(--choice-on, var(--basil-soft));
+  border-color: var(--basil);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--line-strong);
+  background: var(--surface-raised);
+}
+.field:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+}
+.field input:focus-visible {
+  outline: 0;
+}

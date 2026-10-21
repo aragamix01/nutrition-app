@@ -1,0 +1,464 @@
+/* Component styles — from the Design System (components/bundle.css). */
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 24px;
+  background: var(--surface);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+.num,
+.num-lg,
+.num-display,
+.nu-step input {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+}
+.nu-muted {
+  color: var(--ink-muted);
+}
+.nu-text-chili {
+  color: var(--chili);
+}
+.nu-bg-protein {
+  background: var(--protein);
+}
+.nu-bg-carb {
+  background: var(--carb);
+}
+.nu-bg-fat {
+  background: var(--fat);
+}
+.nu-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  margin-right: var(--space-1);
+  vertical-align: 1px;
+}
+.nu-pad {
+  padding: var(--space-4);
+}
+.nu-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  flex-wrap: wrap;
+}
+.nu-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+:where(button, input, a):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Button */
+.nu-btn {
+  font-family: var(--font-display);
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+  border: 0;
+  background: var(--surface-sunken);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.nu-btn-md {
+  min-height: 48px;
+  padding: 0 var(--space-6);
+  font-size: 16px;
+}
+.nu-btn-sm {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  font-size: 14px;
+}
+.nu-btn-block {
+  width: 100%;
+}
+.nu-btn-quiet:active {
+  background: var(--line);
+}
+.nu-btn-primary {
+  background: var(--basil);
+  color: var(--on-basil);
+}
+.nu-btn-danger {
+  background: var(--chili);
+  color: var(--on-chili);
+}
+.nu-btn-ghost {
+  background: transparent;
+  color: var(--basil);
+}
+.nu-btn-ghost:active {
+  background: var(--basil-soft);
+}
+.nu-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Fab */
+.nu-fab {
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border-radius: var(--radius-pill);
+  border: 0;
+  background: var(--basil);
+  color: var(--on-basil);
+  box-shadow: var(--shadow-float);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+.nu-fab:active {
+  transform: scale(0.96);
+}
+.nu-fab-fixed {
+  position: fixed;
+  right: var(--space-6);
+  bottom: calc(var(--nav-height) + var(--space-3) + var(--space-4) + env(safe-area-inset-bottom));
+  z-index: 20;
+}
+
+/* EnergyRing */
+.nu-ring {
+  position: relative;
+  display: inline-block;
+}
+.nu-ring svg {
+  display: block;
+}
+.nu-ring-track {
+  fill: none;
+  stroke: var(--surface-sunken);
+}
+.nu-ring-fill {
+  fill: none;
+  stroke: var(--basil);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms ease-out;
+}
+.nu-ring-over .nu-ring-fill {
+  stroke: var(--chili);
+}
+.nu-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.nu-ring-cap {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.nu-ring-over .nu-ring-cap:first-child {
+  color: var(--chili);
+  font-weight: 600;
+}
+.nu-ring-num {
+  color: var(--ink);
+}
+
+/* MacroBars */
+.nu-macros {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.nu-macro-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-1);
+}
+.nu-macro-label {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.nu-macro-head .num .nu-muted {
+  font-weight: 400;
+}
+.nu-bar {
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.nu-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 300ms ease-out;
+}
+
+/* Card + MealCard */
+.nu-card {
+  background: var(--surface-raised);
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.nu-meal {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4);
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.nu-meal-tap {
+  cursor: pointer;
+}
+.nu-meal-tap:active {
+  background: var(--surface-sunken);
+}
+.nu-meal-main {
+  flex: 1;
+  min-width: 0;
+}
+.nu-meal-meta {
+  display: flex;
+  gap: var(--space-2);
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.nu-meal-name {
+  margin: 2px 0;
+}
+.nu-meal-macros {
+  display: flex;
+  gap: var(--space-3);
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.nu-meal-src {
+  margin-top: var(--space-2);
+}
+.nu-meal-kcal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* SourceTag */
+.nu-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.nu-tag-basil {
+  background: var(--basil-soft);
+  color: var(--basil);
+}
+.nu-tag-neutral {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+}
+.nu-tag-estimate {
+  background: var(--carb-soft);
+  color: var(--ink);
+  border: 1px dashed var(--carb);
+}
+
+/* IngredientRow */
+.nu-ing {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.nu-ing:last-child {
+  border-bottom: 0;
+}
+.nu-ing-unmatched {
+  background: var(--chili-soft);
+}
+.nu-ing-main {
+  flex: 1;
+  min-width: 0;
+}
+.nu-ing-name {
+  font-weight: 600;
+}
+.nu-ing-match {
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink-muted);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 3px;
+}
+.nu-ing-match.nu-text-chili {
+  color: var(--chili);
+  font-weight: 500;
+  text-decoration-color: currentColor;
+}
+.nu-ing-foot {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+.nu-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.nu-step-btn {
+  width: var(--tap-target);
+  height: var(--tap-target);
+  border-radius: var(--radius-pill);
+  border: 0;
+  background: var(--surface-sunken);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.nu-step-btn:active {
+  background: var(--line);
+}
+.nu-step-field {
+  display: flex;
+  gap: 2px;
+  height: var(--tap-target);
+  box-sizing: border-box;
+  padding: 0 var(--space-2);
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  align-items: center;
+}
+.nu-step-field input {
+  width: 2.6em;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: right;
+  padding: 0;
+}
+.nu-step-field input:focus-visible {
+  outline: 0;
+}
+.nu-step-field:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* BottomNav — floating pill */
+.nu-nav {
+  display: flex;
+  height: var(--nav-height);
+  margin: 0 var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom));
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-float);
+}
+.nu-nav-item {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  background: none;
+  border: 0;
+  color: var(--ink-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.nu-nav-item .nu-nav-label {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+}
+.nu-nav-item.is-active {
+  color: var(--basil);
+  font-weight: 500;
+}
+.nu-nav-item.is-active .nu-nav-label {
+  background: var(--basil-soft);
+}
+
+/* Skeleton */
+.nu-skel {
+  display: block;
+  background: var(--line);
+  animation: nu-pulse 1.4s ease-in-out infinite;
+}
+.nu-skel-sm {
+  border-radius: var(--radius-sm);
+}
+.nu-skel-md {
+  border-radius: var(--radius-md);
+}
+.nu-skel-lg {
+  border-radius: var(--radius-lg);
+}
+.nu-skel-pill,
+.nu-skel-circle {
+  border-radius: var(--radius-pill);
+}
+@keyframes nu-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nu-skel {
+    animation: none;
+  }
+  .nu-ring-fill,
+  .nu-bar-fill {
+    transition: none;
+  }
+  .nu-fab:active {
+    transform: none;
+  }
+}
