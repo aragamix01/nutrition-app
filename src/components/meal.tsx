@@ -1,0 +1,331 @@
+'use client';
+
+import Link from 'next/link';
+import { useState } from 'react';
+import { api } from '@/src/lib/api';
+import { useIngredientSearch, type IngredientHit, type MealType } from '@/src/lib/queries';
+import { Button, fmt, MEAL_TYPES, PlusIcon, Skeleton, SourceTag } from './ui';
+
+export function BackHeader({ title, href = '/' }: { title: string; href?: string }) {
+  return (
+    <header style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Link
+        href={href}
+        aria-label="ย้อนกลับ"
+        className="icon-btn"
+        style={{ textDecoration: 'none', fontSize: 22 }}
+      >
+        ‹
+      </Link>
+      <h1 className="title" style={{ margin: 0 }}>
+        {title}
+      </h1>
+    </header>
+  );
+}
+
+export function MealTypeSeg({
+  value,
+  onChange,
+}: {
+  value: MealType;
+  onChange: (v: MealType) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="มื้อ"
+      className="seg"
+      style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
+    >
+      {(Object.keys(MEAL_TYPES) as MealType[]).map((t) => (
+        <button
+          key={t}
+          type="button"
+          role="radio"
+          aria-checked={value === t}
+          onClick={() => onChange(t)}
+        >
+          {MEAL_TYPES[t]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function SearchField({
+  value,
+  onChange,
+  placeholder,
+  label,
+  autoFocus,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  label: string;
+  autoFocus?: boolean;
+}) {
+  return (
+    <label className="field" style={{ borderRadius: 999, paddingInline: 16 }}>
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        aria-hidden
+        style={{ color: 'var(--ink-muted)', flex: 'none' }}
+      >
+        <circle cx="11" cy="11" r="6" stroke="currentColor" strokeWidth="1.75" fill="none" />
+        <path d="M20 20l-4.5-4.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+      <input
+        type="search"
+        className="text-input"
+        aria-label={label}
+        placeholder={placeholder}
+        value={value}
+        autoFocus={autoFocus}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  );
+}
+
+export const ingredientName = (i: IngredientHit) => i.nameTh ?? i.nameEn;
+
+/** Bottom sheet: search ingredients, or enter per-100 g values by hand when nothing fits. */
+export function IngredientPicker({
+  title,
+  onPick,
+  onRemove,
+  onClose,
+}: {
+  title: string;
+  onPick: (i: IngredientHit) => void;
+  onRemove?: () => void;
+  onClose: () => void;
+}) {
+  const [q, setQ] = useState('');
+  const [manual, setManual] = useState(false);
+  const search = useIngredientSearch(q);
+  const hits = search.data?.ingredients ?? [];
+
+  return (
+    <div className="sheet-backdrop" onClick={onClose}>
+      <div
+        className="sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 className="heading" style={{ margin: 0 }}>
+            {title}
+          </h2>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ปิด
+          </Button>
+        </div>
+
+        {manual ? (
+          <ManualIngredientForm
+            initialName={q}
+            onCreated={onPick}
+            onCancel={() => setManual(false)}
+          />
+        ) : (
+          <>
+            <SearchField
+              value={q}
+              onChange={setQ}
+              label="ค้นหาวัตถุดิบ"
+              placeholder="เช่น rice white cooked, ไข่ดาว"
+              autoFocus
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 120 }}>
+              {search.isFetching && !hits.length && <Skeleton shape="lg" height={56} />}
+              {search.isError && (
+                <p className="caption nu-text-chili" style={{ margin: 0 }}>
+                  ค้นหาไม่สำเร็จ: {search.error.message}
+                </p>
+              )}
+              {hits.map((h) => (
+                <button key={h.id} type="button" className="list-btn" onClick={() => onPick(h)}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontWeight: 600 }}>{ingredientName(h)}</span>
+                    {h.nameTh && (
+                      <span className="caption nu-muted" style={{ display: 'block' }}>
+                        {h.nameEn}
+                      </span>
+                    )}
+                    <span className="caption nu-muted">
+                      {fmt(h.kcal)} kcal · P {fmt(h.proteinG)} C {fmt(h.carbG)} F {fmt(h.fatG)} /
+                      100 g
+                    </span>
+                  </span>
+                  <SourceTag source={h.source} />
+                </button>
+              ))}
+              {q.trim() && !search.isFetching && search.isSuccess && !hits.length && (
+                <p className="caption nu-muted" style={{ margin: 0, textAlign: 'center' }}>
+                  ไม่พบ “{q.trim()}”
+                </p>
+              )}
+            </div>
+            <Button variant="quiet" block onClick={() => setManual(true)}>
+              ไม่เจอ? กรอกค่าเอง
+            </Button>
+            {onRemove && (
+              <Button variant="ghost" block onClick={onRemove} style={{ color: 'var(--chili)' }}>
+                ลบวัตถุดิบนี้ออก
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ManualIngredientForm({
+  initialName,
+  onCreated,
+  onCancel,
+}: {
+  initialName: string;
+  onCreated: (i: IngredientHit) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [v, setV] = useState({ kcal: '', proteinG: '', carbG: '', fatG: '' });
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const nums = Object.fromEntries(Object.entries(v).map(([k, x]) => [k, Number(x)])) as Record<
+    keyof typeof v,
+    number
+  >;
+  const valid =
+    name.trim() && Object.values(v).every((x) => x !== '' && Number.isFinite(Number(x)));
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const { ingredient } = await api<{ ingredient: IngredientHit }>('/ingredients', {
+        method: 'POST',
+        json: { nameTh: name.trim(), ...nums },
+      });
+      onCreated(ingredient);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fields = [
+    ['kcal', 'พลังงาน', 'kcal'],
+    ['proteinG', 'โปรตีน', 'g'],
+    ['carbG', 'คาร์บ', 'g'],
+    ['fatG', 'ไขมัน', 'g'],
+  ] as const;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <p className="caption nu-muted" style={{ margin: 0 }}>
+        ใส่ค่าต่อ 100 g (ดูจากฉลากโภชนาการได้)
+      </p>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span className="label nu-muted">ชื่อวัตถุดิบ</span>
+        <span className="field">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ fontFamily: 'var(--font-sans)', fontSize: 15 }}
+          />
+        </span>
+      </label>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {fields.map(([k, label, unit]) => (
+          <label key={k} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span className="label nu-muted">{label}</span>
+            <span className="field">
+              <input
+                type="number"
+                inputMode="decimal"
+                value={v[k]}
+                onChange={(e) => setV({ ...v, [k]: e.target.value })}
+              />
+              <span className="caption nu-muted">{unit}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      {error && (
+        <p className="caption nu-text-chili" role="alert" style={{ margin: 0 }}>
+          {error}
+        </p>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Button variant="quiet" onClick={onCancel} style={{ flex: 1 }}>
+          กลับไปค้นหา
+        </Button>
+        <Button variant="primary" disabled={!valid || saving} onClick={save} style={{ flex: 1 }}>
+          {saving ? 'กำลังบันทึก…' : 'เพิ่มวัตถุดิบ'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Dish row for the library lists: tap to review/edit, "+" to log one serving right away. */
+export function DishRow({
+  name,
+  kcal,
+  useCount,
+  href,
+  onQuickLog,
+  logging,
+}: {
+  name: string;
+  kcal: number;
+  useCount: number;
+  href: string;
+  onQuickLog: () => void;
+  logging?: boolean;
+}) {
+  return (
+    <div
+      className="nu-card"
+      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px 8px 16px' }}
+    >
+      <Link
+        href={href}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          color: 'var(--ink)',
+          textDecoration: 'none',
+          padding: '6px 0',
+        }}
+      >
+        <span className="heading" style={{ display: 'block', fontSize: 16, lineHeight: '23px' }}>
+          {name}
+        </span>
+        <span className="caption nu-muted">
+          {fmt(kcal)} kcal{useCount ? ` · กิน ${useCount} ครั้ง` : ''}
+        </span>
+      </Link>
+      <button
+        type="button"
+        className="icon-btn"
+        aria-label={`บันทึก ${name} ทันที`}
+        disabled={logging}
+        onClick={onQuickLog}
+      >
+        <PlusIcon size={18} width={2.5} />
+      </button>
+    </div>
+  );
+}

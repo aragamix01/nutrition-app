@@ -17,6 +17,21 @@ export type IngredientHit = {
   isDish: boolean;
 };
 
+/** Drizzle `ingredient` row → API shape. */
+export const toHit = (r: IngredientHit & Record<string, unknown>): IngredientHit => ({
+  id: r.id,
+  source: r.source,
+  nameEn: r.nameEn,
+  nameTh: r.nameTh,
+  kcal: r.kcal,
+  proteinG: r.proteinG,
+  carbG: r.carbG,
+  fatG: r.fatG,
+  fiberG: r.fiberG,
+  sodiumMg: r.sodiumMg,
+  isDish: r.isDish,
+});
+
 /**
  * English prefix query for the tsvector column: "rice white cook" → 'rice & white & cook:*',
  * so results show up while typing. Null when the query has no latin words (e.g. Thai only).

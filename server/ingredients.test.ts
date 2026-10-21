@@ -1,29 +1,13 @@
-import { PGlite } from '@electric-sql/pglite';
-import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
-import { drizzle } from 'drizzle-orm/pglite';
-import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { ingredient } from '@/db/schema';
 import { readUsda } from '@/scripts/usda/read';
 import { prefixTsQuery, searchIngredients } from './ingredients';
-
-const root = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
+import { createTestDb, repoPath } from './test-db';
 
 /** Real migrations + USDA fixtures in an in-process Postgres. */
 async function setup() {
-  const client = new PGlite({ extensions: { pg_trgm } });
-  for (const f of readdirSync(root('drizzle'))
-    .filter((f) => f.endsWith('.sql'))
-    .sort()) {
-    for (const stmt of readFileSync(root(`drizzle/${f}`), 'utf8').split(
-      '--> statement-breakpoint',
-    )) {
-      if (stmt.trim()) await client.exec(stmt);
-    }
-  }
-  const db = drizzle({ client });
-  const { rows } = await readUsda(root('scripts/usda/__fixtures__'));
+  const db = await createTestDb();
+  const { rows } = await readUsda(repoPath('scripts/usda/__fixtures__'));
   const extra = [
     ['1001', 'Rice, white, long-grain, regular, raw, enriched', 365],
     ['1002', 'Rice, white, glutinous, cooked', 97],

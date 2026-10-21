@@ -21,3 +21,6 @@ data/usda/
 .claude/settings.local.json
 npm-debug.log*
 .DS_Store
+
+# local dev database (PGlite)
+.pglite/

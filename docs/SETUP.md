@@ -8,6 +8,23 @@ The repo can stay public: keys live only in the Vercel dashboard and your local 
 
 ---
 
+## Try it now (no setup)
+
+Before any of the steps below, you can already use the app on your computer:
+
+```bash
+npm install
+```
+
+```bash
+npm run dev
+```
+
+Open http://localhost:3000. Without `DATABASE_URL`, the app uses a local test database in `.pglite/` with about 25 sample ingredients and 2 sample dishes (approximate values, for trying things out only).
+To start over, stop the server and delete the `.pglite` folder.
+
+---
+
 ## Part A: needed now
 
 ### A1. Check your GitHub email
