@@ -3,7 +3,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { BackHeader, IngredientPicker, ingredientName, MealTypeSeg } from '@/src/components/meal';
+import {
+  BackHeader,
+  IngredientPicker,
+  ingredientName,
+  MealTypeSeg,
+  THAI_FCD_CREDIT,
+} from '@/src/components/meal';
 import { Button, fmt, IngredientRow, PlusIcon, Skeleton } from '@/src/components/ui';
 import { api } from '@/src/lib/api';
 import { clearDrafts, loadDraft } from '@/src/lib/draft';
@@ -25,7 +31,10 @@ type Row = {
   label?: string;
   alternatives?: IngredientHit[];
   query?: string;
+  /** The AI's Thai FCD-style English name, for the Thai FCD fallback search. */
+  thaiQuery?: string;
 };
+type Picker = { replace: number | null; mode?: 'thaifcd'; wholeDish?: boolean };
 type AiInfo = { notes: string; confidence: number; index: number; total: number };
 type Draft = {
   name: string;
@@ -92,6 +101,7 @@ function Review() {
           label: draft.dish.source === 'ai' ? i.nameTh : undefined,
           alternatives: i.alternatives,
           query: i.usdaQuery || i.nameTh,
+          thaiQuery: i.thaiQuery,
         })),
         portion: draft.dish.portionMultiplier,
         ai: {
@@ -130,7 +140,7 @@ function ReviewForm({ initial }: { initial: Draft }) {
   const [type, setType] = useState(initial.type);
   const [portion, setPortion] = useState(initial.portion);
   const [rows, setRows] = useState<Row[]>(initial.rows);
-  const [picker, setPicker] = useState<{ replace: number | null } | null>(null);
+  const [picker, setPicker] = useState<Picker | null>(null);
   const [toLibrary, setToLibrary] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,7 +168,12 @@ function ReviewForm({ initial }: { initial: Draft }) {
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, grams } : r)));
 
   const pick = (i: IngredientHit) => {
-    if (picker?.replace != null) {
+    if (picker?.wholeDish) {
+      // One ready-to-eat item for the whole plate, keeping the estimated plate weight.
+      const plate = kept.reduce((a, r) => a + r.grams, 0);
+      setRows([{ key: nextKey++, ingredient: i, grams: plate || 300 }]);
+      if (!name.trim() && i.nameTh) setName(i.nameTh);
+    } else if (picker?.replace != null) {
       setRows((rs) => rs.map((r) => (r.key === picker.replace ? { ...r, ingredient: i } : r)));
     } else {
       setRows((rs) => [...rs, { key: nextKey++, ingredient: i, grams: 100 }]);
@@ -302,7 +317,8 @@ function ReviewForm({ initial }: { initial: Draft }) {
               grams={r.grams}
               onGramsChange={(g) => setGrams(r.key, g)}
               onChangeMatch={() => setPicker({ replace: r.key })}
-              onFindFallback={() => setPicker({ replace: r.key })}
+              onFindFallback={() => setPicker({ replace: r.key, mode: 'thaifcd' })}
+              fallbackLabel="ไม่พบข้อมูล — ค้นใน Thai FCD"
             />
           ))}
           {!rows.length && (
@@ -323,7 +339,31 @@ function ReviewForm({ initial }: { initial: Draft }) {
           >
             <PlusIcon size={18} width={2.5} /> เพิ่มวัตถุดิบ
           </button>
+          <button
+            type="button"
+            className="list-btn"
+            style={{
+              borderRadius: 0,
+              color: 'var(--ink-muted)',
+              borderTop: '1px solid var(--line)',
+            }}
+            onClick={() => setPicker({ replace: null, mode: 'thaifcd', wholeDish: true })}
+          >
+            <span>
+              <span className="label" style={{ display: 'block', color: 'var(--ink)' }}>
+                ใช้ทั้งจานจาก Thai FCD
+              </span>
+              <span className="caption">
+                แทนวัตถุดิบทั้งหมดด้วยอาหารปรุงสำเร็จ 1 รายการ (กลุ่ม T)
+              </span>
+            </span>
+          </button>
         </section>
+        {rows.some((r) => r.ingredient?.source === 'thaifcd') && (
+          <p className="caption nu-muted" style={{ margin: 0 }}>
+            {THAI_FCD_CREDIT}
+          </p>
+        )}
         <p className="caption nu-muted" style={{ margin: 0 }}>
           กรัมเป็นค่าต่อ 1 ที่ · ตั้ง 0 g เพื่อตัดวัตถุดิบออก · อย่าลืมน้ำมัน/น้ำตาลที่ใช้ปรุง
         </p>
@@ -381,14 +421,23 @@ function ReviewForm({ initial }: { initial: Draft }) {
 
       {picker && (
         <IngredientPicker
-          title={picker.replace != null ? 'เปลี่ยนวัตถุดิบ' : 'เพิ่มวัตถุดิบ'}
+          title={
+            picker.wholeDish
+              ? 'ใช้ทั้งจานจาก Thai FCD'
+              : picker.replace != null
+                ? 'เปลี่ยนวัตถุดิบ'
+                : 'เพิ่มวัตถุดิบ'
+          }
+          startMode={picker.mode ?? 'db'}
+          thaiGroup={picker.wholeDish ? 'T' : undefined}
+          thaiQuery={pickerRow?.thaiQuery}
           onPick={pick}
           onClose={() => setPicker(null)}
           initialQuery={pickerRow?.query ?? ''}
           suggestions={pickerRow?.alternatives ?? []}
           manualName={pickerRow?.label}
           onRemove={
-            picker.replace != null
+            picker.replace != null && !picker.wholeDish
               ? () => {
                   setRows((rs) => rs.filter((r) => r.key !== picker.replace));
                   setPicker(null);

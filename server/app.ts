@@ -24,6 +24,7 @@ import { daySummary, rangeSummary } from './summary';
 import { AnalyzeInput, analyzeImage, modelForEnv } from './analyze';
 import { AiUnavailableError } from './gemini';
 import { hitRateLimit, RateLimitError } from './ratelimit';
+import { importThaiFcd, searchThaiFcd, ThaiFcdError } from './thaifcd/client';
 
 async function db() {
   const { db: d } = await getDb();
@@ -76,6 +77,7 @@ app.onError((err, c) => {
   if (err instanceof BadInputError) return c.json({ error: err.message }, 400);
   if (err instanceof NotFoundError) return c.json({ error: err.message }, 404);
   if (err instanceof AiUnavailableError) return c.json({ error: err.message }, err.status);
+  if (err instanceof ThaiFcdError) return c.json({ error: err.message }, err.status);
   if (err instanceof RateLimitError) {
     c.header('Retry-After', String(err.retryAfterSeconds));
     return c.json({ error: 'ใช้ AI ถี่เกินไป ลองใหม่ภายหลังหรือกรอกเอง' }, 429);
@@ -227,4 +229,19 @@ app.post('/analyze', async (c) => {
   const body = AnalyzeInput.parse(await json(c.req.raw));
   await hitRateLimit(d, 'analyze', ANALYZE_LIMIT, 3600);
   return c.json(await analyzeImage(d, body, await modelForEnv()));
+});
+
+// ---------------------------------------------------------------- Thai FCD fallback (user-triggered only)
+
+app.get('/thaifcd/search', async (c) => {
+  const q = c.req.query('q')?.trim() ?? '';
+  if (!q || q.length > 100) throw new HTTPException(400, { message: 'q is required' });
+  return c.json({ results: await searchThaiFcd(await db(), q, c.req.query('group') || undefined) });
+});
+
+const ThaiFcdImport = z.object({ id: z.string().regex(/^\d+$/), name: z.string().max(300) });
+
+app.post('/thaifcd/import', async (c) => {
+  const hit = ThaiFcdImport.parse(await json(c.req.raw));
+  return c.json({ ingredient: await importThaiFcd(await db(), hit) }, 201);
 });

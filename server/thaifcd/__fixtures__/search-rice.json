@@ -1,0 +1,12 @@
+﻿[
+  { "dbcode": "STD", "id": "1542", "name": "Brown rice and chicken red curry" },
+  {
+    "dbcode": "STD",
+    "id": "1587",
+    "name": "Fried rice noodles (fine thread) with pork, egg and soysauce"
+  },
+  { "dbcode": "STD", "id": "1554", "name": "Fried rice with pork, vegetable and egg" },
+  { "dbcode": "STD", "id": "1552", "name": "Fried rice, not specified" },
+  { "dbcode": "STD", "id": "1553", "name": "Fried rice, with vegetables" },
+  { "dbcode": "STD", "id": "1557", "name": "Khao-mun  (Rice cooked in chicken broth)" }
+]

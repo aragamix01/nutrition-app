@@ -121,6 +121,9 @@ export function IngredientPicker({
   initialQuery = '',
   suggestions = [],
   manualName,
+  thaiQuery = '',
+  startMode = 'db',
+  thaiGroup,
 }: {
   title: string;
   onPick: (i: IngredientHit) => void;
@@ -132,9 +135,14 @@ export function IngredientPicker({
   suggestions?: IngredientHit[];
   /** Name to pre-fill when entering values by hand (the AI's Thai name). */
   manualName?: string;
+  /** Pre-filled Thai FCD search (the AI's thai_query). */
+  thaiQuery?: string;
+  startMode?: 'db' | 'thaifcd';
+  /** Limit Thai FCD to one food group, e.g. T (ready-to-eat dishes). */
+  thaiGroup?: string;
 }) {
   const [q, setQ] = useState(initialQuery);
-  const [manual, setManual] = useState(false);
+  const [mode, setMode] = useState<'db' | 'manual' | 'thaifcd'>(startMode);
   const search = useIngredientSearch(q);
   const hits = search.data?.ingredients ?? [];
 
@@ -156,11 +164,19 @@ export function IngredientPicker({
           </Button>
         </div>
 
-        {manual ? (
+        {mode === 'thaifcd' ? (
+          <ThaiFcdSearch
+            initialQuery={thaiQuery || q}
+            group={thaiGroup}
+            onPick={onPick}
+            onManual={() => setMode('manual')}
+            onBack={startMode === 'db' ? () => setMode('db') : undefined}
+          />
+        ) : mode === 'manual' ? (
           <ManualIngredientForm
             initialName={manualName ?? q}
             onCreated={onPick}
-            onCancel={() => setManual(false)}
+            onCancel={() => setMode(startMode)}
           />
         ) : (
           <>
@@ -198,9 +214,14 @@ export function IngredientPicker({
                 </p>
               )}
             </div>
-            <Button variant="quiet" block onClick={() => setManual(true)}>
-              ไม่เจอ? กรอกค่าเอง
-            </Button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button variant="quiet" style={{ flex: 1 }} onClick={() => setMode('thaifcd')}>
+                ค้นใน Thai FCD
+              </Button>
+              <Button variant="quiet" style={{ flex: 1 }} onClick={() => setMode('manual')}>
+                กรอกค่าเอง
+              </Button>
+            </div>
             {onRemove && (
               <Button variant="ghost" block onClick={onRemove} style={{ color: 'var(--chili)' }}>
                 ลบวัตถุดิบนี้ออก
@@ -351,6 +372,137 @@ export function DishRow({
       >
         <PlusIcon size={18} width={2.5} />
       </button>
+    </div>
+  );
+}
+
+type ThaiFcdResult = { id: string; name: string; imported: IngredientHit | null };
+
+export const THAI_FCD_CREDIT =
+  'ข้อมูลจาก Thai Food Composition Database, Institute of Nutrition, Mahidol University (2025)';
+
+/**
+ * Searches the Thai FCD website. External, rate-limited and English-only, so it runs only when the
+ * user presses search (never while typing); picking an item imports it once, then reuses it.
+ */
+function ThaiFcdSearch({
+  initialQuery,
+  group,
+  onPick,
+  onManual,
+  onBack,
+}: {
+  initialQuery: string;
+  group?: string;
+  onPick: (i: IngredientHit) => void;
+  onManual: () => void;
+  onBack?: () => void;
+}) {
+  const [q, setQ] = useState(initialQuery);
+  const [results, setResults] = useState<ThaiFcdResult[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const search = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!q.trim()) return;
+    setBusy('search');
+    setError(null);
+    try {
+      const params = new URLSearchParams({ q: q.trim(), ...(group && { group }) });
+      setResults((await api<{ results: ThaiFcdResult[] }>(`/thaifcd/search?${params}`)).results);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const choose = async (r: ThaiFcdResult) => {
+    if (r.imported) return onPick(r.imported);
+    setBusy(r.id);
+    setError(null);
+    try {
+      const { ingredient } = await api<{ ingredient: IngredientHit }>('/thaifcd/import', {
+        method: 'POST',
+        json: { id: r.id, name: r.name },
+      });
+      onPick(ingredient);
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <form onSubmit={search} style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <SearchField
+            value={q}
+            onChange={setQ}
+            label="ค้นใน Thai FCD"
+            placeholder="ชื่อภาษาอังกฤษ เช่น fried rice"
+            autoFocus
+          />
+        </div>
+        <Button type="submit" variant="primary" disabled={!q.trim() || busy != null}>
+          {busy === 'search' ? 'กำลังค้น…' : 'ค้น'}
+        </Button>
+      </form>
+      <p className="caption nu-muted" style={{ margin: 0 }}>
+        {group === 'T' ? 'เฉพาะอาหารปรุงสำเร็จ (กลุ่ม T) · ' : ''}ค้นด้วยชื่อภาษาอังกฤษ · ค่าต่อ 100
+        g
+      </p>
+      {error && (
+        <p className="caption nu-text-chili" role="alert" style={{ margin: 0 }}>
+          {error}
+        </p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 80 }}>
+        {busy === 'search' && <Skeleton shape="lg" height={56} />}
+        {results?.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            className="list-btn"
+            disabled={busy != null}
+            onClick={() => choose(r)}
+          >
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontWeight: 600 }}>
+                {r.imported ? ingredientName(r.imported) : r.name}
+              </span>
+              <span className="caption nu-muted">
+                {r.imported
+                  ? `${r.name} · ${fmt(r.imported.kcal)} kcal / 100 g`
+                  : busy === r.id
+                    ? 'กำลังดึงข้อมูล…'
+                    : 'แตะเพื่อดึงข้อมูล'}
+              </span>
+            </span>
+            <SourceTag source="thaifcd">{r.imported ? 'นำเข้าแล้ว' : 'Thai FCD'}</SourceTag>
+          </button>
+        ))}
+        {results && !results.length && (
+          <p className="caption nu-muted" style={{ margin: 0, textAlign: 'center' }}>
+            ไม่พบใน Thai FCD — ลองคำอื่น หรือกรอกค่าเอง
+          </p>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {onBack && (
+          <Button variant="quiet" style={{ flex: 1 }} onClick={onBack}>
+            กลับไปค้นในแอป
+          </Button>
+        )}
+        <Button variant="quiet" style={{ flex: 1 }} onClick={onManual}>
+          กรอกค่าเอง
+        </Button>
+      </div>
+      <p className="caption nu-muted" style={{ margin: 0, fontSize: 11 }}>
+        {THAI_FCD_CREDIT}
+      </p>
     </div>
   );
 }
