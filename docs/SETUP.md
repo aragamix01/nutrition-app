@@ -1,160 +1,149 @@
-# Setup — your steps, in order
+# Setup: your steps, in order
 
-Things only you can do (accounts, keys, downloads). Do them top to bottom.
+These are the steps only you can do (accounts, keys, downloads). Do them top to bottom.
 **Part A** is needed now. **Part B** can wait until the phase that needs it.
 
-Never commit `.env.local` or any key — it is already in `.gitignore`.
+Everything is done in the browser. You don't need the Vercel CLI.
+The repo can stay public: keys live only in the Vercel dashboard and your local `.env.local`, which is never committed.
 
 ---
 
-## Part A — needed now
+## Part A: needed now
 
-### A1. Make the GitHub repo private
+### A1. Check your GitHub email
 
-1. Open https://github.com/aragamix01/nutrition-app/settings
-2. Scroll to **Danger Zone** → **Change repository visibility** → **Make private**.
-3. Open https://github.com/settings/emails and check that `aragamix01@gmail.com` shows **Verified**.
+Vercel's free plan only deploys commits whose author is the account owner.
 
-### A2. Install the Vercel CLI
+1. Open https://github.com/settings/emails
+2. Check that `aragamix01@gmail.com` is listed and shows **Verified**.
 
-```bash
-npm i -g vercel
-```
+### A2. Create the Vercel project
 
-```bash
-vercel login
-```
-
-Choose **Continue with GitHub** and sign in as `aragamix01`.
-
-### A3. Create the Vercel project
-
-1. Go to https://vercel.com/new
-2. **Import Git Repository** → pick `aragamix01/nutrition-app` (click **Adjust GitHub App Permissions** if it is not listed).
-3. Framework Preset: **Next.js** (auto-detected). Leave everything else as is.
+1. Go to https://vercel.com/new and sign in with **GitHub** as `aragamix01`.
+2. Under **Import Git Repository**, pick `aragamix01/nutrition-app`.
+   If it isn't listed, click **Adjust GitHub App Permissions** and allow the repo.
+3. Framework Preset should say **Next.js**. Leave everything else as it is.
 4. Click **Deploy** and wait for it to finish.
-5. Open `https://<your-project>.vercel.app/api/health` — expect `{"ok":true,"db":"not_configured"}`.
+5. Open `https://<your-project>.vercel.app/api/health`. You should see `{"ok":true,"db":"not_configured"}`.
 
-### A4. Put functions in Singapore (closest to Thailand)
+From now on, every push to `main` deploys automatically.
 
-1. Project → **Settings** → **Functions** → **Function Region**.
-2. Choose **Singapore (sin1)** → **Save**.
+### A3. Put the server in Singapore (closest to Thailand)
 
-### A5. Add the Neon database
+1. In the project, go to **Settings**, then **Functions**, then **Function Region**.
+2. Choose **Singapore (sin1)** and click **Save**.
 
-1. Project → **Storage** tab → **Create Database** → **Neon** → **Continue**.
+### A4. Add the Neon database
+
+1. In the project, open the **Storage** tab, click **Create Database**, choose **Neon**, then **Continue**.
 2. Plan: **Free**. Region: **Singapore (aws-ap-southeast-1)**. Name: `nutrition`.
-3. Connect it to the project for **Development, Preview, Production** → **Connect**.
-   Vercel now has `DATABASE_URL` set automatically.
+3. Connect it to **Development, Preview and Production**, then click **Connect**.
+   Vercel now sets `DATABASE_URL` for the live site automatically.
 
-### A6. Create a separate dev database branch
+### A5. Make a separate dev database
 
-So testing never touches your real data.
+This keeps testing away from your real data.
 
-1. Storage tab → click the Neon database → **Open in Neon Console**.
-2. **Branches** → **New Branch** → name `dev`, parent `main` → **Create**.
-3. On the `dev` branch click **Connect** → copy the connection string
-   (starts with `postgresql://`, ends with `?sslmode=require...`). Keep it for A8.
+1. In the **Storage** tab, click the Neon database, then **Open in Neon Console**.
+2. Go to **Branches**, click **New Branch**, name it `dev` with parent `main`, and click **Create**.
+3. With the `dev` branch selected, click **Connect** and copy the connection string.
+   It starts with `postgresql://`. Keep it for the next step.
 
-### A7. Link this folder to Vercel and pull env vars
+### A6. Create `.env.local` on your computer
 
-In the project folder:
-
-```bash
-vercel link
-```
-
-Answer: yes → your account → **Link to existing project** → `nutrition-app`.
+In the project folder, copy the example file:
 
 ```bash
-vercel env pull .env.local
+cp .env.example .env.local
 ```
-
-### A8. Edit `.env.local`
 
 Open `.env.local` and:
 
-1. Replace the `DATABASE_URL=` value with the **dev** branch string from A6.
-2. Add this line at the end:
+1. Paste the **dev** connection string from A5 after `DATABASE_URL=`.
+2. Check that `DEV_BYPASS_AUTH=true` is there. It's already in the example. It skips the LINE login on your computer only.
 
-```
-DEV_BYPASS_AUTH=true
-```
+Leave the other lines empty for now.
 
-> Every time you run `vercel env pull` again, the file is overwritten — redo A8.
-> **Never** add `DEV_BYPASS_AUTH` in the Vercel dashboard.
+> **Never** add `DEV_BYPASS_AUTH` in the Vercel dashboard. On the live site it would let anyone use the app.
 
-### A9. Create the tables (dev branch)
+### A7. Create the tables in the dev database
 
 ```bash
 npm run db:migrate
 ```
 
-### A10. Download the USDA data
+### A8. Download the USDA data
 
 1. Go to https://fdc.nal.usda.gov/download-datasets
 2. Under **SR Legacy**, download the **CSV** zip.
-3. Extract it into `data/usda/` inside the project, so you have
-   `data/usda/FoodData_Central_sr_legacy_food_csv_.../food.csv`.
+3. Extract it into `data/usda/` inside the project, so that this file exists:
+   `data/usda/FoodData_Central_sr_legacy_food_csv_.../food.csv`
+   (`data/usda/` is never committed.)
 
-### A11. Import USDA into the dev database
+### A9. Load USDA into the dev database
 
 ```bash
 npm run db:import-usda
 ```
 
-Expect `Parsed ~7,7xx foods` then `Done.`
+You should see `Parsed ~7,7xx foods`, then `Done.`
 
-### A12. Check it works locally
+### A10. Check it works on your computer
 
 ```bash
 npm run dev
 ```
 
-1. http://localhost:3000/api/health → `"db":"ok"`
-2. http://localhost:3000/api/ingredients/search?q=rice%20white%20cooked → list of cooked white rice
-3. http://localhost:3000/profile → fill in → **บันทึกโปรไฟล์** → reload, values stay
-4. http://localhost:3000 → the ring shows your daily target
+Open each of these:
 
-**Tell Claude when A12 passes** (or paste any error).
+1. http://localhost:3000/api/health should show `"db":"ok"`.
+2. http://localhost:3000/api/ingredients/search?q=rice%20white%20cooked should list cooked white rice.
+3. http://localhost:3000/profile: fill it in and press **บันทึกโปรไฟล์**. Reload the page; your values should still be there.
+4. http://localhost:3000 should show the ring with your daily target.
+
+**Tell Claude when A10 works, or paste any error you see.**
 
 ---
 
-## Part B — later, when the phase needs it
+## Part B: later, when the phase needs it
 
-### B1. Gemini API key (phase 5 — photo analysis)
+Every key in Part B goes in two places:
 
-1. Go to https://aistudio.google.com/apikey → **Create API key** → copy it.
-2. Vercel project → **Settings** → **Environment Variables** → add for all three environments:
-   - `GEMINI_API_KEY` = the key
-   - `GEMINI_MODEL` = the current free **Flash-Lite** (or Flash) model name shown in AI Studio
-3. Re-run `vercel env pull .env.local`, then redo A8.
+- **Vercel:** in the project, go to **Settings**, then **Environment Variables**. Add it with all three environments ticked, and save.
+- **Your computer:** add the same `NAME=value` line to `.env.local`.
 
-### B2. Scraper contact (phase 6 — Thai FCD)
+After adding keys in Vercel, redeploy: go to **Deployments**, open the **⋯** menu on the latest one, and click **Redeploy**.
 
-Vercel → Environment Variables → add `SCRAPER_CONTACT` = an email you read (sent in the User-Agent so INMU can reach you). Pull + redo A8.
+### B1. Gemini API key (phase 5: photo analysis)
 
-### B3. LINE Login channel + LIFF (phase 7)
+1. Go to https://aistudio.google.com/apikey, click **Create API key**, and copy it.
+2. Add `GEMINI_API_KEY` = the key.
+3. Add `GEMINI_MODEL` = the current free **Flash-Lite** (or Flash) model name shown in AI Studio.
 
-1. Go to https://developers.line.biz/console/ → log in with your LINE account.
-2. **Create a new provider** → name e.g. `personal`.
-3. In the provider → **Create a new channel** → **LINE Login**.
-   - Region: Thailand. App types: **Web app**. Fill name/description → agree → **Create**.
-4. **Basic settings** tab:
-   - Copy **Channel ID** → Vercel env `LINE_CHANNEL_ID`.
-   - Copy **Your user ID** (starts with `U`) → Vercel env `ALLOWED_LINE_USER_ID`.
-5. **LIFF** tab → **Add**:
+### B2. Scraper contact (phase 6: Thai FCD)
+
+Add `SCRAPER_CONTACT` = an email address you read. It's sent with each Thai FCD request so INMU can contact you.
+
+### B3. LINE Login channel and LIFF app (phase 7)
+
+1. Go to https://developers.line.biz/console/ and log in with your LINE account.
+2. Click **Create a new provider** and name it, for example `personal`.
+3. Inside the provider, click **Create a new channel** and choose **LINE Login**.
+   Region: Thailand. App type: **Web app**. Fill in the name and description, agree to the terms, and click **Create**.
+4. In the **Basic settings** tab:
+   - Copy **Channel ID** and add it as `LINE_CHANNEL_ID`.
+   - Copy **Your user ID** (it starts with `U`) and add it as `ALLOWED_LINE_USER_ID`.
+5. In the **LIFF** tab, click **Add**:
    - Size: **Full**
    - Endpoint URL: `https://<your-project>.vercel.app`
-   - Scopes: `openid`, `profile`
-   - **Add** → copy the **LIFF ID** → Vercel env `NEXT_PUBLIC_LIFF_ID`.
-6. Leave the channel in **Developing** — it works for your own account.
-7. Pull + redo A8.
+   - Scopes: `openid` and `profile`
+   - Click **Add**, then copy the **LIFF ID** and add it as `NEXT_PUBLIC_LIFF_ID`.
+6. Leave the channel in **Developing**. It works for your own LINE account.
 
-### B4. Production database (phase 7 — go live)
+### B4. Set up the real database (phase 7: go live)
 
-Run migrations and the USDA import once against **main** (the real database).
-Copy the `main` branch connection string from the Neon Console, then:
+Create the tables and load USDA once into the **main** branch (the real database).
+In the Neon Console, select the `main` branch, click **Connect**, and copy its connection string. Then run:
 
 ```bash
 DATABASE_URL='<main connection string>' npm run db:migrate
@@ -164,21 +153,22 @@ DATABASE_URL='<main connection string>' npm run db:migrate
 DATABASE_URL='<main connection string>' npm run db:import-usda
 ```
 
-Then in Vercel → **Deployments** → latest → **⋯** → **Redeploy**.
+Then redeploy in Vercel.
 
 ### B5. Final check
 
-1. Open the LIFF URL (`https://liff.line.me/<LIFF ID>`) in your own LINE chat → the app opens and works.
-2. Open `https://<your-project>.vercel.app/api/profile` in a normal browser → must answer 401 (no token).
+1. In your own LINE chat, open `https://liff.line.me/<LIFF ID>`. The app should open and work.
+2. In a normal browser, open `https://<your-project>.vercel.app/api/profile`. It must answer **401**, because there's no LINE login.
 
 ---
 
 ## If something fails
 
-| Symptom                     | Fix                                                                                  |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| `DATABASE_URL is not set`   | A7–A8 not done, or `.env.local` was overwritten — redo A8                            |
-| `db:"error"` on /api/health | Wrong connection string; copy it again from the Neon Console                         |
-| `No food.csv in data/usda`  | Zip not extracted into `data/usda/` (A10)                                            |
-| Vercel deploy **blocked**   | Commit author must be `aragamix01 <aragamix01@gmail.com>`, no `Co-Authored-By` lines |
-| 403 from the API in LINE    | `ALLOWED_LINE_USER_ID` does not match your user ID (B3 step 4)                       |
+| What you see                        | What to do                                                                              |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| `DATABASE_URL is not set`           | `.env.local` is missing or the line is empty. Redo A6.                                  |
+| `"db":"error"` on /api/health       | The connection string is wrong. Copy it again from the Neon Console.                    |
+| `No food.csv in data/usda`          | The zip isn't extracted into `data/usda/`. Redo A8.                                     |
+| Vercel says the deploy is blocked   | The commit author must be `aragamix01 <aragamix01@gmail.com>` with no `Co-Authored-By`. |
+| 403 from the API inside LINE        | `ALLOWED_LINE_USER_ID` doesn't match your user ID. Redo B3 step 4.                      |
+| Profile won't save on your computer | Check that `DEV_BYPASS_AUTH=true` is in `.env.local`, then restart `npm run dev`.       |
