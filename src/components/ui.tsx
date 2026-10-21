@@ -212,6 +212,8 @@ export function IngredientRow(p: {
   onGramsChange?: (g: number) => void;
   onChangeMatch?: () => void;
   onFindFallback?: () => void;
+  /** Text of the unmatched-row action (Thai FCD search arrives in phase 6). */
+  fallbackLabel?: string;
 }) {
   const step = p.step ?? 10;
   const g = p.grams;
@@ -223,7 +225,7 @@ export function IngredientRow(p: {
         <div className="nu-ing-name">{p.name}</div>
         {unmatched ? (
           <button type="button" className="nu-ing-match nu-text-chili" onClick={p.onFindFallback}>
-            ไม่พบข้อมูล — ค้นใน Thai FCD
+            {p.fallbackLabel ?? 'ไม่พบข้อมูล — แตะเพื่อค้นหา'}
           </button>
         ) : (
           <button type="button" className="nu-ing-match" onClick={p.onChangeMatch}>

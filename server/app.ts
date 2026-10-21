@@ -21,6 +21,9 @@ import {
   updateDish,
 } from './meals';
 import { daySummary, rangeSummary } from './summary';
+import { AnalyzeInput, analyzeImage, modelForEnv } from './analyze';
+import { AiUnavailableError } from './gemini';
+import { hitRateLimit, RateLimitError } from './ratelimit';
 
 async function db() {
   const { db: d } = await getDb();
@@ -72,6 +75,11 @@ app.onError((err, c) => {
   if (err instanceof z.ZodError) return c.json({ error: z.prettifyError(err) }, 400);
   if (err instanceof BadInputError) return c.json({ error: err.message }, 400);
   if (err instanceof NotFoundError) return c.json({ error: err.message }, 404);
+  if (err instanceof AiUnavailableError) return c.json({ error: err.message }, err.status);
+  if (err instanceof RateLimitError) {
+    c.header('Retry-After', String(err.retryAfterSeconds));
+    return c.json({ error: 'ใช้ AI ถี่เกินไป ลองใหม่ภายหลังหรือกรอกเอง' }, 429);
+  }
   console.error(err);
   return c.json({ error: 'internal error' }, 500);
 });
@@ -206,4 +214,17 @@ app.get('/summary/range', async (c) => {
   // Default to the last 7 days; a malformed `to` is passed through so rangeSummary reports it as 400.
   const from = c.req.query('from') || (/^\d{4}-\d{2}-\d{2}$/.test(to) ? addDays(to, -6) : to);
   return c.json(await rangeSummary(await db(), from, to));
+});
+
+// ---------------------------------------------------------------- AI photo analysis
+
+/** Free-tier friendly: at most 30 analyses per hour, shared across all function instances. */
+const ANALYZE_LIMIT = 30;
+
+app.post('/analyze', async (c) => {
+  const d = await db();
+  // Validate first so malformed uploads don't use up the hourly quota.
+  const body = AnalyzeInput.parse(await json(c.req.raw));
+  await hitRateLimit(d, 'analyze', ANALYZE_LIMIT, 3600);
+  return c.json(await analyzeImage(d, body, await modelForEnv()));
 });

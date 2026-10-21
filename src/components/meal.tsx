@@ -94,18 +94,46 @@ export function SearchField({
 export const ingredientName = (i: IngredientHit) => i.nameTh ?? i.nameEn;
 
 /** Bottom sheet: search ingredients, or enter per-100 g values by hand when nothing fits. */
+function HitButton({ hit: h, onPick }: { hit: IngredientHit; onPick: (i: IngredientHit) => void }) {
+  return (
+    <button type="button" className="list-btn" onClick={() => onPick(h)}>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontWeight: 600 }}>{ingredientName(h)}</span>
+        {h.nameTh && (
+          <span className="caption nu-muted" style={{ display: 'block' }}>
+            {h.nameEn}
+          </span>
+        )}
+        <span className="caption nu-muted">
+          {fmt(h.kcal)} kcal · P {fmt(h.proteinG)} C {fmt(h.carbG)} F {fmt(h.fatG)} / 100 g
+        </span>
+      </span>
+      <SourceTag source={h.source} />
+    </button>
+  );
+}
+
 export function IngredientPicker({
   title,
   onPick,
   onRemove,
   onClose,
+  initialQuery = '',
+  suggestions = [],
+  manualName,
 }: {
   title: string;
   onPick: (i: IngredientHit) => void;
   onRemove?: () => void;
   onClose: () => void;
+  /** Pre-filled search, e.g. the AI's usda_query for this ingredient. */
+  initialQuery?: string;
+  /** The AI's other candidate matches, shown above the search results. */
+  suggestions?: IngredientHit[];
+  /** Name to pre-fill when entering values by hand (the AI's Thai name). */
+  manualName?: string;
 }) {
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(initialQuery);
   const [manual, setManual] = useState(false);
   const search = useIngredientSearch(q);
   const hits = search.data?.ingredients ?? [];
@@ -130,7 +158,7 @@ export function IngredientPicker({
 
         {manual ? (
           <ManualIngredientForm
-            initialName={q}
+            initialName={manualName ?? q}
             onCreated={onPick}
             onCancel={() => setManual(false)}
           />
@@ -143,6 +171,17 @@ export function IngredientPicker({
               placeholder="เช่น rice white cooked, ไข่ดาว"
               autoFocus
             />
+            {suggestions.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span className="label nu-muted">ตัวเลือกอื่นที่ใกล้เคียง</span>
+                {suggestions.map((h) => (
+                  <HitButton key={h.id} hit={h} onPick={onPick} />
+                ))}
+                <span className="label nu-muted" style={{ marginTop: 6 }}>
+                  ผลค้นหา
+                </span>
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minHeight: 120 }}>
               {search.isFetching && !hits.length && <Skeleton shape="lg" height={56} />}
               {search.isError && (
@@ -151,21 +190,7 @@ export function IngredientPicker({
                 </p>
               )}
               {hits.map((h) => (
-                <button key={h.id} type="button" className="list-btn" onClick={() => onPick(h)}>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontWeight: 600 }}>{ingredientName(h)}</span>
-                    {h.nameTh && (
-                      <span className="caption nu-muted" style={{ display: 'block' }}>
-                        {h.nameEn}
-                      </span>
-                    )}
-                    <span className="caption nu-muted">
-                      {fmt(h.kcal)} kcal · P {fmt(h.proteinG)} C {fmt(h.carbG)} F {fmt(h.fatG)} /
-                      100 g
-                    </span>
-                  </span>
-                  <SourceTag source={h.source} />
-                </button>
+                <HitButton key={h.id} hit={h} onPick={onPick} />
               ))}
               {q.trim() && !search.isFetching && search.isSuccess && !hits.length && (
                 <p className="caption nu-muted" style={{ margin: 0, textAlign: 'center' }}>

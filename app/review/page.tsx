@@ -6,6 +6,7 @@ import { Suspense, useState } from 'react';
 import { BackHeader, IngredientPicker, ingredientName, MealTypeSeg } from '@/src/components/meal';
 import { Button, fmt, IngredientRow, PlusIcon, Skeleton } from '@/src/components/ui';
 import { api } from '@/src/lib/api';
+import { clearDrafts, loadDraft } from '@/src/lib/draft';
 import { sumComponents } from '@/src/lib/nutrition';
 import {
   mealTypeNow,
@@ -15,21 +16,50 @@ import {
   type MealType,
 } from '@/src/lib/queries';
 
-type Row = { key: number; ingredient: IngredientHit; grams: number };
-type Draft = { name: string; type: MealType; dish: Dish | null; rows: Row[] };
+type Row = {
+  key: number;
+  /** null = the AI named an ingredient we couldn't find; must be matched (or set to 0 g) before saving. */
+  ingredient: IngredientHit | null;
+  grams: number;
+  /** The AI's name for this ingredient (shown instead of the database name). */
+  label?: string;
+  alternatives?: IngredientHit[];
+  query?: string;
+};
+type AiInfo = { notes: string; confidence: number; index: number; total: number };
+type Draft = {
+  name: string;
+  type: MealType;
+  dish: Dish | null;
+  rows: Row[];
+  portion: number;
+  ai: AiInfo | null;
+};
 
 const PORTIONS = [0.5, 1, 1.5, 2];
 let nextKey = 1;
 
 const recipeKey = (name: string, rows: Row[]) =>
-  JSON.stringify([name.trim(), rows.map((r) => [r.ingredient.id, r.grams])]);
+  JSON.stringify([name.trim(), rows.map((r) => [r.ingredient?.id ?? null, r.grams])]);
 
 function Review() {
   const params = useSearchParams();
-  const dishId = params.get('dish') ? Number(params.get('dish')) : null;
-  const type = (params.get('type') as MealType) || mealTypeNow();
+  const draftIndex = params.get('draft') != null ? Number(params.get('draft')) : null;
+  // This boundary renders client-side only (useSearchParams), so sessionStorage is available here.
+  const [draft] = useState(() => (draftIndex != null ? loadDraft(draftIndex) : null));
+  const dishParam = params.get('dish') ? Number(params.get('dish')) : null;
+  const dishId = draft ? draft.dish.dishId : dishParam;
+  const type = (params.get('type') as MealType) || draft?.mealType || mealTypeNow();
   const dish = useDish(dishId);
 
+  if (draftIndex != null && !draft) {
+    return (
+      <main className="page">
+        <BackHeader title="ตรวจแก้" href="/add" />
+        <p className="nu-muted">ไม่พบผลวิเคราะห์รูปนี้แล้ว ลองถ่ายใหม่อีกครั้ง</p>
+      </main>
+    );
+  }
   if (dishId != null && dish.isPending) {
     return (
       <main className="page">
@@ -49,18 +79,48 @@ function Review() {
   }
 
   const d = dish.data?.dish ?? null;
-  const initial: Draft = {
-    name: d?.nameTh ?? '',
-    type,
-    dish: d,
-    // Negative keys for loaded rows; rows added later take nextKey (positive).
-    rows: (d?.components ?? []).map((c, i) => ({
-      key: -(i + 1),
-      ingredient: c.ingredient,
-      grams: c.grams,
-    })),
-  };
-  return <ReviewForm key={d?.id ?? 'new'} initial={initial} />;
+  // Negative keys for loaded rows; rows added later take nextKey (positive).
+  const initial: Draft = draft
+    ? {
+        name: draft.dish.nameTh,
+        type,
+        dish: d,
+        rows: draft.dish.ingredients.map((i, n) => ({
+          key: -(n + 1),
+          ingredient: i.match,
+          grams: i.grams,
+          label: draft.dish.source === 'ai' ? i.nameTh : undefined,
+          alternatives: i.alternatives,
+          query: i.usdaQuery || i.nameTh,
+        })),
+        portion: draft.dish.portionMultiplier,
+        ai: {
+          notes: draft.notes,
+          confidence: draft.dish.confidence,
+          index: draftIndex!,
+          total: draft.total,
+        },
+      }
+    : {
+        name: d?.nameTh ?? '',
+        type,
+        dish: d,
+        rows: (d?.components ?? []).map((c, n) => ({
+          key: -(n + 1),
+          ingredient: c.ingredient,
+          grams: c.grams,
+        })),
+        portion: 1,
+        ai: null,
+      };
+  return <ReviewForm key={`${draftIndex ?? ''}-${d?.id ?? 'new'}`} initial={initial} />;
+}
+
+function matchLabel(r: Row): string | null {
+  const i = r.ingredient;
+  if (!i) return null;
+  if (r.label) return i.nameTh && i.nameTh !== r.label ? i.nameTh : i.nameEn;
+  return i.nameTh ? i.nameEn : 'เปลี่ยนวัตถุดิบ';
 }
 
 function ReviewForm({ initial }: { initial: Draft }) {
@@ -68,7 +128,7 @@ function ReviewForm({ initial }: { initial: Draft }) {
   const qc = useQueryClient();
   const [name, setName] = useState(initial.name);
   const [type, setType] = useState(initial.type);
-  const [portion, setPortion] = useState(1);
+  const [portion, setPortion] = useState(initial.portion);
   const [rows, setRows] = useState<Row[]>(initial.rows);
   const [picker, setPicker] = useState<{ replace: number | null } | null>(null);
   const [toLibrary, setToLibrary] = useState(true);
@@ -76,8 +136,12 @@ function ReviewForm({ initial }: { initial: Draft }) {
   const [error, setError] = useState<string | null>(null);
 
   const kept = rows.filter((r) => r.grams > 0);
+  const matched = kept.filter(
+    (r): r is Row & { ingredient: IngredientHit } => r.ingredient != null,
+  );
+  const unmatched = kept.length - matched.length;
   const t = sumComponents(
-    kept.map((r) => ({ per100: r.ingredient, grams: r.grams })),
+    matched.map((r) => ({ per100: r.ingredient, grams: r.grams })),
     portion,
   );
   const changed = recipeKey(name, kept) !== recipeKey(initial.name, initial.rows);
@@ -86,7 +150,9 @@ function ReviewForm({ initial }: { initial: Draft }) {
       ? 'อัปเดตสูตรในคลังด้วย'
       : null
     : 'บันทึกเข้าคลังด้วย';
-  const canSave = name.trim() && kept.length && !saving;
+  const canSave = name.trim() && matched.length && !unmatched && !saving;
+  const portions = [...new Set([...PORTIONS, initial.portion])].sort((a, b) => a - b);
+  const pickerRow = picker?.replace != null ? rows.find((r) => r.key === picker.replace) : null;
 
   const setGrams = (key: number, grams: number) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, grams } : r)));
@@ -103,7 +169,7 @@ function ReviewForm({ initial }: { initial: Draft }) {
   const save = async () => {
     setSaving(true);
     setError(null);
-    const components = kept.map((r) => ({ ingredientId: r.ingredient.id, grams: r.grams }));
+    const components = matched.map((r) => ({ ingredientId: r.ingredient.id, grams: r.grams }));
     try {
       let dishId = initial.dish?.id;
       if (libraryOption && toLibrary) {
@@ -130,6 +196,13 @@ function ReviewForm({ initial }: { initial: Draft }) {
       await Promise.all(
         ['meals', 'dishes', 'dish', 'range'].map((k) => qc.invalidateQueries({ queryKey: [k] })),
       );
+      // More dishes in the same photo: review the next one.
+      const ai = initial.ai;
+      if (ai && ai.index + 1 < ai.total) {
+        router.replace(`/review?draft=${ai.index + 1}&type=${type}`);
+        return;
+      }
+      clearDrafts();
       router.push('/');
     } catch (e) {
       setError((e as Error).message);
@@ -139,9 +212,34 @@ function ReviewForm({ initial }: { initial: Draft }) {
 
   return (
     <>
-      <main className="page" style={{ paddingBottom: 200 }}>
+      <main className="page" style={{ paddingBottom: 220 }}>
         <BackHeader title="ตรวจแก้" href="/add" />
         <MealTypeSeg value={type} onChange={setType} />
+
+        {initial.ai && (
+          <section
+            role="note"
+            style={{
+              padding: '12px 16px',
+              borderRadius: 20,
+              border: '1.5px dashed var(--carb)',
+              background: 'var(--carb-soft)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4,
+            }}
+          >
+            <span className="label">
+              {initial.dish ? 'AI จำได้ว่าเป็นเมนูในคลัง' : 'AI ประมาณจากรูป'} —
+              ตรวจชื่อและกรัมก่อนบันทึก
+              {initial.ai.total > 1 && ` · จานที่ ${initial.ai.index + 1}/${initial.ai.total}`}
+            </span>
+            {initial.ai.confidence < 0.5 && (
+              <span className="caption nu-text-chili">AI ไม่ค่อยมั่นใจกับจานนี้</span>
+            )}
+            {initial.ai.notes && <span className="caption nu-muted">{initial.ai.notes}</span>}
+          </section>
+        )}
 
         <section
           className="nu-card"
@@ -177,9 +275,9 @@ function ReviewForm({ initial }: { initial: Draft }) {
             role="radiogroup"
             aria-label="จำนวนที่กิน"
             className="seg"
-            style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}
+            style={{ gridTemplateColumns: `repeat(${portions.length}, 1fr)` }}
           >
-            {PORTIONS.map((p) => (
+            {portions.map((p) => (
               <button
                 key={p}
                 type="button"
@@ -197,13 +295,14 @@ function ReviewForm({ initial }: { initial: Draft }) {
           {rows.map((r) => (
             <IngredientRow
               key={r.key}
-              name={ingredientName(r.ingredient)}
-              matchName={r.ingredient.nameTh ? r.ingredient.nameEn : 'เปลี่ยนวัตถุดิบ'}
-              source={r.ingredient.source}
-              kcal={(r.ingredient.kcal * r.grams) / 100}
+              name={r.label ?? (r.ingredient ? ingredientName(r.ingredient) : '')}
+              matchName={matchLabel(r)}
+              source={r.ingredient?.source}
+              kcal={r.ingredient ? (r.ingredient.kcal * r.grams) / 100 : null}
               grams={r.grams}
               onGramsChange={(g) => setGrams(r.key, g)}
               onChangeMatch={() => setPicker({ replace: r.key })}
+              onFindFallback={() => setPicker({ replace: r.key })}
             />
           ))}
           {!rows.length && (
@@ -241,6 +340,15 @@ function ReviewForm({ initial }: { initial: Draft }) {
             boxShadow: 'var(--shadow-float)',
           }}
         >
+          {unmatched > 0 && (
+            <p
+              className="caption nu-text-chili"
+              role="status"
+              style={{ margin: 0, paddingInline: 4 }}
+            >
+              ยังมี {unmatched} วัตถุดิบที่ไม่พบข้อมูล — แตะเพื่อเลือก หรือตั้งเป็น 0 g
+            </p>
+          )}
           {libraryOption && (
             <label
               style={{
@@ -276,6 +384,9 @@ function ReviewForm({ initial }: { initial: Draft }) {
           title={picker.replace != null ? 'เปลี่ยนวัตถุดิบ' : 'เพิ่มวัตถุดิบ'}
           onPick={pick}
           onClose={() => setPicker(null)}
+          initialQuery={pickerRow?.query ?? ''}
+          suggestions={pickerRow?.alternatives ?? []}
+          manualName={pickerRow?.label}
           onRemove={
             picker.replace != null
               ? () => {
@@ -290,10 +401,16 @@ function ReviewForm({ initial }: { initial: Draft }) {
   );
 }
 
+/** Remount per URL: moving to the next AI dish only changes ?draft=, and state must start fresh. */
+function ReviewByUrl() {
+  const params = useSearchParams();
+  return <Review key={params.toString()} />;
+}
+
 export default function ReviewPage() {
   return (
     <Suspense>
-      <Review />
+      <ReviewByUrl />
     </Suspense>
   );
 }

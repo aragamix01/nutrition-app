@@ -30,6 +30,14 @@ npm run db:seed-demo
 ```
 
 Remove the fake meals again with `npm run db:seed-demo -- --clear`.
+
+To try the photo flow without a Gemini key, or to test without touching your Neon data:
+
+```bash
+npm run dev:local
+```
+
+It always uses the local `.pglite` database and a fake AI answer (always "ข้าวกะเพราหมูสับไข่ดาว"), even when `.env.local` points at Neon. It can run next to a normal `npm run dev`.
 With `DATABASE_URL` set, the same command writes to that database instead, so only point it at the `dev` branch.
 
 ---

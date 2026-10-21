@@ -2,3 +2,5 @@
 node_modules
 drizzle
 PLAN.md
+.next-local
+.pglite

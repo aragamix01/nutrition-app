@@ -3,7 +3,8 @@ import { app } from '@/server/app';
 
 // All API routes live in one Hono app = one Vercel function.
 export const runtime = 'nodejs';
-export const maxDuration = 30;
+// Room for the Gemini call (25 s timeout) on /api/analyze.
+export const maxDuration = 60;
 
 export const GET = handle(app);
 export const POST = handle(app);

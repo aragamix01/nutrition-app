@@ -14,17 +14,23 @@ import {
 /** Foundation Foods downloads also contain sample/sub-sample rows; keep only real foods. */
 const KEEP_TYPES = new Set(['sr_legacy_food', 'foundation_food']);
 
-/** Accepts the extracted folder itself or a parent holding one FoodData_Central_* folder. */
+function foldersWithFoodCsv(dir: string, depth: number): string[] {
+  if (existsSync(join(dir, 'food.csv'))) return [dir];
+  if (depth === 0) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .flatMap((d) => foldersWithFoodCsv(join(dir, d.name), depth - 1));
+}
+
+/**
+ * Accepts the extracted folder itself or any parent up to 3 levels above it
+ * (the SR Legacy zip extracts as FoodData_Central_.../FoodData_Central_.../food.csv).
+ */
 export function findCsvDir(dir: string): string {
-  if (existsSync(join(dir, 'food.csv'))) return dir;
-  const inner = readdirSync(dir, { withFileTypes: true }).filter(
-    (d) => d.isDirectory() && existsSync(join(dir, d.name, 'food.csv')),
-  );
-  if (inner.length === 1) return join(dir, inner[0].name);
-  if (inner.length > 1) {
-    throw new Error(
-      `Several USDA folders in ${dir}; pass one: ${inner.map((d) => d.name).join(', ')}`,
-    );
+  const found = foldersWithFoodCsv(dir, 3);
+  if (found.length === 1) return found[0];
+  if (found.length > 1) {
+    throw new Error(`Several USDA folders in ${dir}; pass one:\n  ${found.join('\n  ')}`);
   }
   throw new Error(
     `No food.csv in ${dir}. Download SR Legacy CSV from fdc.nal.usda.gov and extract it there.`,
