@@ -23,6 +23,15 @@ npm run dev
 Open http://localhost:3000. Without `DATABASE_URL`, the app uses a local test database in `.pglite/` with about 25 sample ingredients and 2 sample dishes (approximate values, for trying things out only).
 To start over, stop the server and delete the `.pglite` folder.
 
+To fill the History charts with 14 days of fake meals and weights, stop `npm run dev` first, then:
+
+```bash
+npm run db:seed-demo
+```
+
+Remove the fake meals again with `npm run db:seed-demo -- --clear`.
+With `DATABASE_URL` set, the same command writes to that database instead, so only point it at the `dev` branch.
+
 ---
 
 ## Part A: needed now

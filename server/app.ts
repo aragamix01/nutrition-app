@@ -4,6 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { profile, weightLog } from '@/db/schema';
 import { ACTIVITY_LEVELS, bangkokDate } from '@/src/lib/nutrition';
+import { addDays } from '@/src/lib/stats';
 import { requireUser } from './auth';
 import { getDb } from './db';
 import { searchIngredients } from './ingredients';
@@ -19,6 +20,7 @@ import {
   NotFoundError,
   updateDish,
 } from './meals';
+import { daySummary, rangeSummary } from './summary';
 
 async function db() {
   const { db: d } = await getDb();
@@ -191,4 +193,17 @@ app.put('/dishes/:id', async (c) => {
   return c.json({
     dish: await updateDish(await db(), idParam(c.req.param('id')), await json(c.req.raw)),
   });
+});
+
+// ---------------------------------------------------------------- summaries
+
+app.get('/summary', async (c) => {
+  return c.json(await daySummary(await db(), c.req.query('date') || bangkokDate()));
+});
+
+app.get('/summary/range', async (c) => {
+  const to = c.req.query('to') || bangkokDate();
+  // Default to the last 7 days; a malformed `to` is passed through so rangeSummary reports it as 400.
+  const from = c.req.query('from') || (/^\d{4}-\d{2}-\d{2}$/.test(to) ? addDays(to, -6) : to);
+  return c.json(await rangeSummary(await db(), from, to));
 });

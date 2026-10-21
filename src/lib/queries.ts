@@ -6,7 +6,7 @@ import type { ProfileBody } from '@/server/app';
 import type { IngredientHit } from '@/server/ingredients';
 import type { Dish, Meal, MealInput, MealType } from '@/server/meals';
 import { api } from './api';
-import { bangkokDate, type Nutrients } from './nutrition';
+import { bangkokDate, type DailyTargets, type Nutrients } from './nutrition';
 
 export type { Dish, IngredientHit, Meal, MealType };
 
@@ -65,8 +65,7 @@ export function useLogMeal() {
   return useMutation({
     mutationFn: (m: MealInput) => api<{ id: number }>('/meals', { method: 'POST', json: m }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['meals'] });
-      qc.invalidateQueries({ queryKey: ['dishes'] });
+      for (const k of ['meals', 'dishes', 'range']) qc.invalidateQueries({ queryKey: [k] });
     },
   });
 }
@@ -75,7 +74,50 @@ export function useDeleteMeal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api(`/meals/${id}`, { method: 'DELETE' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['meals'] }),
+    onSuccess: () => {
+      for (const k of ['meals', 'dishes', 'range']) qc.invalidateQueries({ queryKey: [k] });
+    },
+  });
+}
+
+export type RangeSummary = {
+  from: string;
+  to: string;
+  days: {
+    date: string;
+    kcal: number;
+    proteinG: number;
+    carbG: number;
+    fatG: number;
+    mealCount: number;
+  }[];
+  loggedDays: number;
+  averages: { kcal: number; proteinG: number; carbG: number; fatG: number };
+  targets: DailyTargets | null;
+};
+
+export const useRange = (from: string, to: string) =>
+  useQuery({
+    queryKey: ['range', from, to],
+    queryFn: () => api<RangeSummary>(`/summary/range?from=${from}&to=${to}`),
+    enabled: from !== '' && to !== '',
+    placeholderData: (prev) => prev,
+  });
+
+export const useWeights = (from: string) =>
+  useQuery({
+    queryKey: ['weights', from],
+    queryFn: () => api<{ weights: WeightRow[] }>(`/weight?from=${from}`),
+    enabled: from !== '',
+  });
+
+export function useLogWeight() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (weightKg: number) => api('/weight', { method: 'POST', json: { weightKg } }),
+    onSuccess: () => {
+      for (const k of ['weights', 'profile', 'range']) qc.invalidateQueries({ queryKey: [k] });
+    },
   });
 }
 

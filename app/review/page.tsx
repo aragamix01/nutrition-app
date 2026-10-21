@@ -128,7 +128,7 @@ function ReviewForm({ initial }: { initial: Draft }) {
         },
       });
       await Promise.all(
-        ['meals', 'dishes', 'dish'].map((k) => qc.invalidateQueries({ queryKey: [k] })),
+        ['meals', 'dishes', 'dish', 'range'].map((k) => qc.invalidateQueries({ queryKey: [k] })),
       );
       router.push('/');
     } catch (e) {

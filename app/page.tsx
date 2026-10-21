@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import { BottomNav } from '@/src/components/BottomNav';
 import {
   Button,
@@ -13,6 +13,7 @@ import {
   PlusIcon,
   Skeleton,
 } from '@/src/components/ui';
+import { useClientValue } from '@/src/lib/client';
 import { bangkokDate, dailyTargets, GOAL_RATES } from '@/src/lib/nutrition';
 import {
   mealTypeNow,
@@ -32,14 +33,6 @@ const dayLabel = () =>
     day: 'numeric',
     month: 'short',
   }).format(new Date());
-
-/** Client-only values: the page is prerendered at build time, and Node's Thai locale data differs from browsers'. */
-const useClientValue = <T,>(get: () => T, server: T) =>
-  useSyncExternalStore(
-    () => () => {},
-    get,
-    () => server,
-  );
 
 const timeOf = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', {
