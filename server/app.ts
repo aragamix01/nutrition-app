@@ -6,6 +6,7 @@ import { profile, weightLog } from '@/db/schema';
 import { ACTIVITY_LEVELS, bangkokDate } from '@/src/lib/nutrition';
 import { requireUser } from './auth';
 import { getDb } from './db';
+import { searchIngredients } from './ingredients';
 
 function db() {
   const d = getDb();
@@ -94,4 +95,16 @@ app.post('/weight', async (c) => {
     .onConflictDoUpdate({ target: weightLog.date, set: { weightKg } })
     .returning();
   return c.json({ weight: row });
+});
+
+const SearchQuery = z.object({
+  q: z.string().trim().min(1).max(100),
+  limit: z.coerce.number().int().min(1).max(20).default(10),
+});
+
+app.get('/ingredients/search', async (c) => {
+  const parsed = SearchQuery.safeParse(c.req.query());
+  if (!parsed.success) throw new HTTPException(400, { message: z.prettifyError(parsed.error) });
+  const { q, limit } = parsed.data;
+  return c.json({ ingredients: await searchIngredients(db(), q, limit) });
 });
